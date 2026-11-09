@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="mod/readinglibrary/db" VERSION="2025010100"
+       COMMENT="XMLDB file for mod_readinglibrary"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="../../../../lib/xmldb/xmldb.xsd">
+  <TABLES>
+
+    <TABLE NAME="readinglibrary" COMMENT="One row per activity instance">
+      <FIELDS>
+        <FIELD NAME="id"           TYPE="int"  LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="course"       TYPE="int"  LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="name"         TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="intro"        TYPE="text"              NOTNULL="false"/>
+        <FIELD NAME="introformat"  TYPE="int"  LENGTH="4"  NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="course" UNIQUE="false" FIELDS="course"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="readinglibrary_book" COMMENT="PDF books registered in the library">
+      <FIELDS>
+        <FIELD NAME="id"           TYPE="int"  LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="libraryid"    TYPE="int"  LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="title"        TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="author"       TYPE="char" LENGTH="255" NOTNULL="false"/>
+        <FIELD NAME="isbn"         TYPE="char" LENGTH="20"  NOTNULL="false"/>
+        <FIELD NAME="filepath"     TYPE="char" LENGTH="512" NOTNULL="true" COMMENT="Path inside moodledata, never web-accessible"/>
+        <FIELD NAME="total_copies" TYPE="int"  LENGTH="4"  NOTNULL="true" DEFAULT="1"/>
+        <FIELD NAME="language"     TYPE="char" LENGTH="10"  NOTNULL="true" DEFAULT="en" COMMENT="ar for Arabic RTL titles"/>
+        <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"   TYPE="primary" FIELDS="id"/>
+        <KEY NAME="libraryid" TYPE="foreign" FIELDS="libraryid" REFTABLE="readinglibrary" REFFIELDS="id"/>
+      </KEYS>
+    </TABLE>
+
+    <TABLE NAME="readinglibrary_borrow" COMMENT="Tracks who has borrowed which book">
+      <FIELDS>
+        <FIELD NAME="id"            TYPE="int"  LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="bookid"        TYPE="int"  LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="userid"        TYPE="int"  LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="borrowed_at"   TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="due_at"        TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="returned_at"   TYPE="int"  LENGTH="10" NOTNULL="false" COMMENT="NULL means still borrowed"/>
+        <FIELD NAME="session_token" TYPE="char" LENGTH="64"  NOTNULL="false" COMMENT="Single-use read token"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="bookid"  TYPE="foreign" FIELDS="bookid" REFTABLE="readinglibrary_book" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="session_token" UNIQUE="true"  FIELDS="session_token"/>
+        <INDEX NAME="userid"        UNIQUE="false" FIELDS="userid"/>
+      </INDEXES>
+    </TABLE>
+
+  </TABLES>
+</XMLDB>

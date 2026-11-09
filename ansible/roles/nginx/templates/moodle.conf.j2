@@ -1,0 +1,63 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ moodle_domain }};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name {{ moodle_domain }};
+
+    root {{ moodle_webroot }};
+    index index.php;
+
+    ssl_certificate     /etc/letsencrypt/live/{{ moodle_domain }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ moodle_domain }}/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_stapling        on;
+    ssl_stapling_verify on;
+
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+    add_header X-Frame-Options           SAMEORIGIN always;
+    add_header X-Content-Type-Options    nosniff always;
+    add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy        "geolocation=(), microphone=(), camera=()" always;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ ^/(config|dataroot|vendor|node_modules)/ {
+        deny all;
+        return 404;
+    }
+
+    location ~ \.php$ {
+        include        fastcgi_params;
+        fastcgi_pass   unix:/run/php/php8.4-fpm-moodle.sock;
+        fastcgi_index  index.php;
+        fastcgi_param  SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_read_timeout 300;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    location ~* \.pdf$ {
+        deny all;
+        return 403;
+    }
+
+    client_max_body_size 512M;
+    access_log  /var/log/nginx/moodle-access.log;
+    error_log   /var/log/nginx/moodle-error.log warn;
+}

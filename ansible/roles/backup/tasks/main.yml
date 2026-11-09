@@ -1,0 +1,59 @@
+---
+- name: Install Restic backup tool
+  apt:
+    name: restic
+    state: present
+    update_cache: true
+
+- name: Write Restic environment file (root-readable only)
+  copy:
+    dest: /etc/restic-env
+    mode: "0600"
+    content: |
+      RESTIC_REPOSITORY={{ restic_repo }}
+      RESTIC_PASSWORD={{ restic_password }}
+      B2_ACCOUNT_ID={{ b2_account_id }}
+      B2_ACCOUNT_KEY={{ b2_account_key }}
+
+- name: Initialise Restic repository (no-op if already initialised)
+  shell: |
+    set -a; source /etc/restic-env; set +a
+    restic snapshots 2>/dev/null || restic init
+  changed_when: false
+
+- name: Deploy backup script
+  copy:
+    dest: /usr/local/bin/moodleshield-backup.sh
+    mode: "0750"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      set -a; source /etc/restic-env; set +a
+
+      # Dump PostgreSQL to a temp file before snapshotting
+      DUMP=/tmp/moodle-db-$(date +%Y%m%d%H%M%S).sql
+      pg_dump -U {{ pg_user }} {{ pg_db }} > "$DUMP"
+
+      restic backup \
+        /var/www/moodle \
+        {{ moodle_dataroot }} \
+        "$DUMP" \
+        --tag moodleshield \
+        --exclude='*.log'
+
+      # Remove the temp dump after Restic has snapshotted it
+      rm -f "$DUMP"
+
+      # Enforce retention policy
+      restic forget \
+        --keep-daily 7 \
+        --keep-weekly 4 \
+        --keep-monthly {{ backup_retention_days // 30 }} \
+        --prune
+
+- name: Schedule daily backup at 02:00 UTC
+  cron:
+    name: moodleshield-daily-backup
+    hour: "2"
+    minute: "0"
+    job: "/usr/local/bin/moodleshield-backup.sh >> /var/log/moodleshield-backup.log 2>&1"

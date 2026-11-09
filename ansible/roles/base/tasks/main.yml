@@ -1,0 +1,76 @@
+---
+- name: Set system locale to en_US.UTF-8
+  locale_gen:
+    name: en_US.UTF-8
+    state: present
+
+- name: Set timezone to UTC
+  timezone:
+    name: UTC
+
+- name: Install base packages
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - unzip
+      - ufw
+      - fail2ban
+      - logrotate
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - python3-pip
+    state: present
+    update_cache: true
+
+- name: Harden SSH configuration
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  loop:
+    - { regexp: '^#?PermitRootLogin',      line: 'PermitRootLogin prohibit-password' }
+    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+    - { regexp: '^#?X11Forwarding',        line: 'X11Forwarding no' }
+    - { regexp: '^#?MaxAuthTries',         line: 'MaxAuthTries 3' }
+    - { regexp: '^#?AllowAgentForwarding', line: 'AllowAgentForwarding no' }
+  notify: Restart sshd
+
+- name: Allow SSH through UFW
+  ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+
+- name: Allow WireGuard UDP through UFW
+  ufw:
+    rule: allow
+    port: "51820"
+    proto: udp
+
+- name: Enable UFW with default deny-incoming policy
+  ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+
+- name: Enable and start fail2ban
+  service:
+    name: fail2ban
+    state: started
+    enabled: true
+
+- name: Apply sysctl hardening parameters
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_set: true
+    reload: true
+  loop:
+    - { key: 'net.ipv4.ip_forward',              value: '1' }   # required for WireGuard
+    - { key: 'net.ipv4.conf.all.rp_filter',      value: '1' }
+    - { key: 'net.ipv4.conf.all.accept_redirects', value: '0' }
+    - { key: 'kernel.dmesg_restrict',            value: '1' }

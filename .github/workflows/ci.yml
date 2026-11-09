@@ -1,0 +1,109 @@
+name: MoodleShield CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  terraform-validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6"
+
+      - name: Terraform init (backend disabled for CI)
+        run: terraform -chdir=terraform init -backend=false
+
+      - name: Terraform validate
+        run: terraform -chdir=terraform validate
+
+      - name: Terraform format check
+        run: terraform -chdir=terraform fmt -check -recursive
+
+  ansible-lint:
+    name: Lint Ansible playbooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ansible-lint
+        run: pip install ansible-lint
+
+      - name: Run ansible-lint
+        run: ansible-lint ansible/site.yml
+
+  php-analysis:
+    name: PHP static analysis (Reading Library plugin)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: phpstan, phpcs
+
+      - name: PHPStan analysis
+        run: phpstan analyse moodle/plugins/mod_readinglibrary --level=6
+
+      - name: PHP CodeSniffer (Moodle coding standard)
+        run: phpcs --standard=Moodle moodle/plugins/mod_readinglibrary
+
+  shellcheck:
+    name: ShellCheck all scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: "./scripts"
+
+  security-scan:
+    name: Secrets and IaC security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy for secrets and misconfigurations
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          exit-code: "1"
+          severity: "HIGH,CRITICAL"
+
+  integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    needs: [terraform-validate, ansible-lint, php-analysis, shellcheck]
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run integration test suite
+        env:
+          MOODLE_HOST: ${{ secrets.STAGING_HOST }}
+          MOODLE_PASS: ${{ secrets.STAGING_ADMIN_PASS }}
+        run: bash tests/integration/integration_test.sh
+
+      - name: Run security test suite
+        env:
+          MOODLE_HOST: ${{ secrets.STAGING_HOST }}
+        run: bash tests/security/security_test.sh
+
+      - name: Upload test logs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: /tmp/moodle-test-*.log

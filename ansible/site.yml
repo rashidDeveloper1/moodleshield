@@ -1,0 +1,28 @@
+---
+- name: Provision MoodleShield Enterprise
+  hosts: primary
+  become: true
+
+  roles:
+    - base
+    - postgres
+    - php
+    - redis
+    - nginx
+    - tls
+    - moodle
+    - wireguard
+    - backup
+
+- name: Provision DR replica (base stack only)
+  hosts: replica
+  become: true
+
+  roles:
+    - base
+    - postgres
+    - php
+    - redis
+    - nginx
+    - tls
+    - wireguard

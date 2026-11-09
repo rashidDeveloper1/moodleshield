@@ -1,0 +1,63 @@
+---
+- name: Create Moodle web root and data directory
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0750"
+  loop:
+    - /var/www/moodle
+    - "{{ moodle_dataroot }}"
+
+- name: Clone Moodle {{ moodle_version }} from official Git mirror
+  git:
+    repo: https://github.com/moodle/moodle.git
+    dest: /var/www/moodle
+    version: "{{ moodle_release_tag }}"
+    depth: 1
+  become_user: www-data
+
+- name: Deploy Moodle config.php from template
+  template:
+    src: config.php.j2
+    dest: /var/www/moodle/config.php
+    owner: www-data
+    group: www-data
+    mode: "0640"
+
+- name: Run Moodle CLI installer (idempotent via --skip-database check)
+  command: >
+    php /var/www/moodle/admin/cli/install_database.php
+    --agree-license
+    --fullname="MoodleShield LMS"
+    --shortname="MoodleShield"
+    --adminuser="{{ moodle_admin_user }}"
+    --adminpass="{{ moodle_admin_pass }}"
+    --adminemail="admin@{{ moodle_domain }}"
+  become_user: www-data
+  register: moodle_install
+  changed_when: "'Installation completed' in moodle_install.stdout"
+  failed_when:
+    - moodle_install.rc != 0
+    - "'already installed' not in moodle_install.stderr"
+
+- name: Copy Reading Library plugin into Moodle mod directory
+  copy:
+    src: "{{ playbook_dir }}/../moodle/plugins/mod_readinglibrary"
+    dest: /var/www/moodle/mod/
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Upgrade Moodle database to register new plugin
+  command: php /var/www/moodle/admin/cli/upgrade.php --non-interactive
+  become_user: www-data
+  changed_when: true
+
+- name: Schedule Moodle cron every minute
+  cron:
+    name: moodle-cron
+    user: www-data
+    minute: "*"
+    job: "/usr/bin/php /var/www/moodle/admin/cli/cron.php >> /var/log/moodle-cron.log 2>&1"

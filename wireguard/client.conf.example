@@ -1,0 +1,14 @@
+# WireGuard admin client configuration example.
+# Copy to /etc/wireguard/wg0.conf on the admin machine.
+# Generate your key pair: wg genkey | tee privkey | wg pubkey > pubkey
+
+[Interface]
+PrivateKey = <YOUR_CLIENT_PRIVATE_KEY>
+Address    = 10.10.1.2/32
+DNS        = 1.1.1.1
+
+[Peer]
+PublicKey  = <SERVER_PUBLIC_KEY>
+Endpoint   = <SERVER_PUBLIC_IP>:51820
+AllowedIPs = 10.10.1.0/24   # route only VPN traffic through the tunnel
+PersistentKeepalive = 25

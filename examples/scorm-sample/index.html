@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Module 1: Introduction</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+    button { margin-top: 24px; padding: 10px 24px; font-size: 1rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Module 1: Introduction</h1>
+  <p>This is a minimal SCORM 1.2 SCO used to verify that Moodle correctly
+     launches SCORM content and records completion status.</p>
+
+  <button onclick="completeCourse()">Mark Complete</button>
+
+  <script>
+    // Locate the SCORM 1.2 API object injected by the Moodle SCORM player
+    function findAPI(win) {
+      let attempts = 0;
+      while (win.API == null && win.parent != null && win.parent !== win) {
+        win = win.parent;
+        if (++attempts > 10) break;
+      }
+      return win.API || null;
+    }
+
+    const api = findAPI(window);
+
+    if (api) {
+      api.LMSInitialize('');
+      api.LMSSetValue('cmi.core.lesson_status', 'incomplete');
+      api.LMSCommit('');
+    }
+
+    function completeCourse() {
+      if (!api) { alert('SCORM API not found.'); return; }
+      api.LMSSetValue('cmi.core.lesson_status', 'passed');
+      api.LMSSetValue('cmi.core.score.raw', '100');
+      api.LMSCommit('');
+      api.LMSFinish('');
+      document.querySelector('button').textContent = 'Completed ✓';
+    }
+  </script>
+</body>
+</html>

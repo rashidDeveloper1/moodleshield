@@ -1,0 +1,69 @@
+---
+- name: Add Sury PHP APT signing key
+  apt_key:
+    url: https://packages.sury.org/php/apt.gpg
+    state: present
+
+- name: Add Sury PHP APT repository
+  apt_repository:
+    repo: "deb https://packages.sury.org/php/ {{ ansible_distribution_release }} main"
+    state: present
+    filename: sury-php
+
+- name: Install PHP 8.4 and all Moodle-required extensions
+  apt:
+    name:
+      - php8.4-fpm
+      - php8.4-pgsql
+      - php8.4-xml
+      - php8.4-mbstring
+      - php8.4-curl
+      - php8.4-zip
+      - php8.4-gd
+      - php8.4-intl
+      - php8.4-soap
+      - php8.4-redis
+      - php8.4-opcache
+      - php8.4-cli
+    state: present
+    update_cache: true
+
+- name: Configure PHP-FPM Moodle pool
+  copy:
+    dest: "{{ php_fpm_pool }}"
+    content: |
+      [moodle]
+      user = www-data
+      group = www-data
+      listen = /run/php/php8.4-fpm-moodle.sock
+      listen.owner = www-data
+      listen.group = www-data
+      pm = dynamic
+      pm.max_children = 20
+      pm.start_servers = 4
+      pm.min_spare_servers = 2
+      pm.max_spare_servers = 6
+      pm.max_requests = 500
+      php_admin_value[upload_max_filesize] = 512M
+      php_admin_value[post_max_size] = 512M
+      php_admin_value[memory_limit] = 256M
+      php_admin_value[max_execution_time] = 300
+  notify: Restart php-fpm
+
+- name: Enable OPcache for production performance
+  lineinfile:
+    path: /etc/php/8.4/fpm/php.ini
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^;?opcache.enable=',          line: 'opcache.enable=1' }
+    - { regexp: '^;?opcache.memory_consumption=', line: 'opcache.memory_consumption=128' }
+    - { regexp: '^;?opcache.max_accelerated_files=', line: 'opcache.max_accelerated_files=10000' }
+    - { regexp: '^;?opcache.validate_timestamps=', line: 'opcache.validate_timestamps=0' }
+  notify: Restart php-fpm
+
+- name: Ensure PHP-FPM is running
+  service:
+    name: "php8.4-fpm"
+    state: started
+    enabled: true

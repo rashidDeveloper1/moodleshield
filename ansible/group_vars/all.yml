@@ -1,0 +1,32 @@
+moodle_domain: "lms.example.com"
+moodle_wwwroot: "https://{{ moodle_domain }}"
+
+moodle_version: "5.3"
+moodle_release_tag: "v5.3.0"
+moodle_webroot: "/var/www/moodle"
+moodle_dataroot: "/var/moodledata"
+moodle_admin_user: "admin"
+# Override moodle_admin_pass in an Ansible Vault file
+moodle_admin_pass: "{{ vault_moodle_admin_pass }}"
+
+pg_version: "17"
+pg_db: "moodle"
+pg_user: "moodle"
+pg_pass: "{{ vault_pg_pass }}"
+
+php_version: "8.4"
+php_fpm_pool: "/etc/php/8.4/fpm/pool.d/moodle.conf"
+
+redis_port: 6379
+redis_requirepass: "{{ vault_redis_pass }}"
+
+restic_repo: "b2:moodleshield-backups"
+restic_password: "{{ vault_restic_password }}"
+b2_account_id: "{{ vault_b2_account_id }}"
+b2_account_key: "{{ vault_b2_account_key }}"
+backup_retention_days: 30
+
+wg_interface: "wg0"
+wg_port: 51820
+wg_server_private_key: "{{ vault_wg_server_private_key }}"
+wg_server_address: "10.10.1.10/24"

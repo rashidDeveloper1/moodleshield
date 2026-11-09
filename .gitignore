@@ -1,0 +1,28 @@
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/terraform.tfvars
+
+# Ansible secrets — never commit the encrypted vault or generated inventory IPs
+ansible/group_vars/vault.yml
+ansible/inventory.ini
+
+# Logs
+*.log
+/tmp/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Test artifacts
+/tmp/moodle-test-*.log
+/tmp/moodle-restore/
+
+# SCORM zip built locally
+examples/moodleshield-sample-scorm.zip

@@ -1,0 +1,25 @@
+---
+- name: Install Certbot and Nginx plugin
+  apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+    update_cache: true
+
+- name: Obtain TLS certificate for {{ moodle_domain }}
+  command: >
+    certbot --nginx
+    --non-interactive
+    --agree-tos
+    --email admin@{{ moodle_domain }}
+    -d {{ moodle_domain }}
+  args:
+    creates: "/etc/letsencrypt/live/{{ moodle_domain }}/fullchain.pem"
+  notify: Reload nginx
+
+- name: Ensure Certbot renewal timer is enabled
+  systemd:
+    name: certbot.timer
+    state: started
+    enabled: true
