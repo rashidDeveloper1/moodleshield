@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 # MoodleShield Enterprise
 # Disaster Recovery Restore Script
@@ -39,6 +38,7 @@ fi
 # Load Restic environment variables
 # shellcheck disable=SC1090
 set -a
+# shellcheck disable=SC1090
 source "$ENV_FILE"
 set +a
 
