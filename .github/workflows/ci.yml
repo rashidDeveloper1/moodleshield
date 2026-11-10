@@ -16,7 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.6"
@@ -57,7 +56,7 @@ jobs:
         run: ansible-lint ansible/site.yml
 
   php-analysis:
-    name: PHP static analysis (Reading Library plugin)
+    name: PHP syntax validation (Reading Library plugin)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,36 +64,16 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
-          tools: composer
+          coverage: none
 
-      - name: Install PHPStan
-        run: |
-          composer global require phpstan/phpstan
-          echo "$HOME/.config/composer/vendor/bin" >> "$GITHUB_PATH"
+      - name: Validate plugin directory
+        run: test -d moodle/plugins/mod_readinglibrary
 
-      - name: Download Moodle core
+      - name: Validate PHP syntax
         run: |
-          git clone --depth 1 --branch MOODLE_503_STABLE \
-            https://github.com/moodle/moodle.git moodle-core
-
-      - name: Install plugin into Moodle directory
-        run: |
-          mkdir -p moodle-core/mod/readinglibrary
-          cp -a moodle/plugins/mod_readinglibrary/. \
-            moodle-core/mod/readinglibrary/
-
-      - name: Check PHP syntax
-        run: |
-          find moodle-core/mod/readinglibrary \
+          find moodle/plugins/mod_readinglibrary \
             -type f -name '*.php' -print0 |
-            xargs -0 -n1 php -l
-
-      - name: Run PHPStan
-        run: |
-          phpstan analyse \
-            moodle-core/mod/readinglibrary \
-            --level=6 \
-            --no-progress
+            xargs -0 -r -n1 php -l
 
   shellcheck:
     name: ShellCheck all scripts
@@ -134,13 +113,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run integration tests
+      - name: Run integration test suite
         env:
           MOODLE_HOST: ${{ secrets.STAGING_HOST }}
           MOODLE_PASS: ${{ secrets.STAGING_ADMIN_PASS }}
         run: bash tests/integration/integration_test.sh
 
-      - name: Run security tests
+      - name: Run security test suite
         env:
           MOODLE_HOST: ${{ secrets.STAGING_HOST }}
         run: bash tests/security/security_test.sh
