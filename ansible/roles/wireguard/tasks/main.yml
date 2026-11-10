@@ -1,18 +1,20 @@
 ---
 - name: Install WireGuard
-  apt:
+  ansible.builtin.apt:
     name: wireguard
     state: present
     update_cache: true
 
 - name: Derive WireGuard server public key from vault private key
-  shell: "echo '{{ wg_server_private_key }}' | wg pubkey"
-  register: wg_pubkey_raw
+  ansible.builtin.shell: "set -o pipefail; printf '%s\\n' '{{ wg_server_private_key }}' | wg pubkey"
+  args:
+    executable: /bin/bash
+  register: wireguard_pubkey_raw
   changed_when: false
   no_log: true
 
 - name: Write /etc/wireguard/wg0.conf
-  copy:
+  ansible.builtin.copy:
     dest: /etc/wireguard/wg0.conf
     mode: "0600"
     content: |
@@ -27,13 +29,13 @@
       # AllowedIPs = 10.10.1.2/32
 
 - name: Enable and start WireGuard wg0 interface
-  systemd:
+  ansible.builtin.systemd:
     name: "wg-quick@wg0"
     state: started
     enabled: true
 
 - name: Allow HTTPS from WireGuard subnet only
-  ufw:
+  community.general.ufw:
     rule: allow
     port: "443"
     proto: tcp

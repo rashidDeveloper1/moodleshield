@@ -1,25 +1,25 @@
 ---
 - name: Install Redis
-  apt:
+  ansible.builtin.apt:
     name: redis-server
     state: present
     update_cache: true
 
 - name: Configure Redis security settings
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/redis/redis.conf
     regexp: "{{ item.regexp }}"
     line: "{{ item.line }}"
   loop:
-    - { regexp: '^bind ',          line: 'bind 127.0.0.1' }
-    - { regexp: '^# requirepass ', line: "requirepass {{ redis_requirepass }}" }
-    - { regexp: '^requirepass ',   line: "requirepass {{ redis_requirepass }}" }
-    - { regexp: '^maxmemory ',     line: 'maxmemory 256mb' }
-    - { regexp: '^maxmemory-policy ', line: 'maxmemory-policy allkeys-lru' }
+    - { regexp: "^bind ", line: "bind 127.0.0.1" }
+    - { regexp: "^# requirepass ", line: "requirepass {{ redis_requirepass }}" }
+    - { regexp: "^requirepass ", line: "requirepass {{ redis_requirepass }}" }
+    - { regexp: "^maxmemory ", line: "maxmemory 256mb" }
+    - { regexp: "^maxmemory-policy ", line: "maxmemory-policy allkeys-lru" }
   notify: Restart redis
 
 - name: Ensure Redis is running
-  service:
+  ansible.builtin.service:
     name: redis-server
     state: started
     enabled: true

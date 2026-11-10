@@ -1,12 +1,12 @@
 ---
 - name: Install Restic backup tool
-  apt:
+  ansible.builtin.apt:
     name: restic
     state: present
     update_cache: true
 
 - name: Write Restic environment file (root-readable only)
-  copy:
+  ansible.builtin.copy:
     dest: /etc/restic-env
     mode: "0600"
     content: |
@@ -16,13 +16,13 @@
       B2_ACCOUNT_KEY={{ b2_account_key }}
 
 - name: Initialise Restic repository (no-op if already initialised)
-  shell: |
+  ansible.builtin.shell: |
     set -a; source /etc/restic-env; set +a
     restic snapshots 2>/dev/null || restic init
   changed_when: false
 
 - name: Deploy backup script
-  copy:
+  ansible.builtin.copy:
     dest: /usr/local/bin/moodleshield-backup.sh
     mode: "0750"
     content: |
@@ -52,7 +52,7 @@
         --prune
 
 - name: Schedule daily backup at 02:00 UTC
-  cron:
+  ansible.builtin.cron:
     name: moodleshield-daily-backup
     hour: "2"
     minute: "0"
