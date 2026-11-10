@@ -16,8 +16,10 @@ if [[ ! -f "$ENV_FILE" ]]; then
     echo "ERROR: $ENV_FILE not found. Run the Ansible backup role first." >&2
     exit 1
 fi
-set -a; source "$ENV_FILE"; set +a
-
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
 echo "==> Dumping PostgreSQL database..."
 pg_dump -U "$DB_USER" "$DB_NAME" > "$DUMP_FILE"
 
