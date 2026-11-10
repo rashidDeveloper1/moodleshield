@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.6"
@@ -110,16 +111,34 @@ jobs:
       - shellcheck
     if: github.ref == 'refs/heads/main'
     environment: staging
+
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check staging credentials
+        id: staging
+        env:
+          MOODLE_HOST: ${{ secrets.STAGING_HOST }}
+          MOODLE_PASS: ${{ secrets.STAGING_ADMIN_PASS }}
+        run: |
+          if [[ -n "$MOODLE_HOST" && -n "$MOODLE_PASS" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Staging credentials found."
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Staging credentials missing."
+            echo "Skipping integration and security tests."
+          fi
+
       - name: Run integration test suite
+        if: steps.staging.outputs.ready == 'true'
         env:
           MOODLE_HOST: ${{ secrets.STAGING_HOST }}
           MOODLE_PASS: ${{ secrets.STAGING_ADMIN_PASS }}
         run: bash tests/integration/integration_test.sh
 
       - name: Run security test suite
+        if: steps.staging.outputs.ready == 'true'
         env:
           MOODLE_HOST: ${{ secrets.STAGING_HOST }}
         run: bash tests/security/security_test.sh
