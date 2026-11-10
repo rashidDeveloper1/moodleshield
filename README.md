@@ -57,6 +57,12 @@ For a business, the expected outcomes include:
 
 ## Architecture Flow
 
+## Architecture Flow
+
+![MoodleShield Enterprise Architecture](docs/architecture/moodle-architecture.png)
+
+Sequence of the secure Moodle platform flow:
+
 ```mermaid
 flowchart TD
     A[Public Internet] --> B[Hetzner Floating IP / Firewall]
