@@ -57,6 +57,43 @@ For a business, the expected outcomes include:
 
 ## Architecture Flow
 
+```mermaid
+flowchart TD
+    A[Public Internet] --> B[Hetzner Floating IP / Firewall]
+    B --> C[WireGuard VPN
+    10.10.1.0/24]
+    C --> D[Nginx + TLS]
+    D --> E[Moodle Application
+    PHP-FPM + Moodle 5.3]
+
+    E --> F[PostgreSQL 17
+    Localhost only]
+    E --> G[Redis
+    Localhost only]
+    E --> H[Protected Content / PDF Library
+    Secure file storage]
+
+    F --> I[Backup and Recovery
+    Encrypted backups + replica server]
+    G --> I
+    H --> I
+
+    classDef internet fill:#dfeaf7,stroke:#1f4e79,stroke-width:2px,color:#0d2b45;
+    classDef edge fill:#f8d7da,stroke:#d33b3b,stroke-width:2px,color:#6b1d1d;
+    classDef vpn fill:#dff3e3,stroke:#2e8b57,stroke-width:2px,color:#1d4d2d;
+    classDef app fill:#fde9d6,stroke:#d9792d,stroke-width:2px,color:#633b0b;
+    classDef data fill:#dfe7f8,stroke:#3a5ea8,stroke-width:2px,color:#1d2d4d;
+    classDef recover fill:#dfeaf7,stroke:#2f5d8b,stroke-width:2px,color:#1b3554;
+
+    class A internet;
+    class B edge;
+    class C vpn;
+    class D vpn;
+    class E app;
+    class F,G,H data;
+    class I recover;
+```
+
 ```text
 Sequence of the secure Moodle platform flow:
 
