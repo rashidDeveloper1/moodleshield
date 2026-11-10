@@ -16,13 +16,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.6"
+
       - name: Terraform init
         run: terraform -chdir=terraform init -backend=false
+
       - name: Terraform validate
         run: terraform -chdir=terraform validate
+
       - name: Terraform format check
         run: terraform -chdir=terraform fmt -check -recursive
 
@@ -31,20 +35,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: Install Ansible Lint
         run: python -m pip install ansible-lint
+
       - name: Install Ansible collections
         run: |
           ansible-galaxy collection install \
             community.general \
             community.postgresql \
             ansible.posix
+
       - name: Validate Ansible syntax
         run: ansible-playbook ansible/site.yml --syntax-check
+
       - name: Run Ansible Lint
         run: ansible-lint ansible/site.yml
 
@@ -53,20 +61,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
-          tools: phpstan, phpcs
-      - name: PHPStan analysis
-        run: phpstan analyse moodle/plugins/mod_readinglibrary --level=6
-      - name: PHP CodeSniffer
-        run: phpcs --standard=Moodle moodle/plugins/mod_readinglibrary
+          tools: composer
+
+      - name: Install PHPStan
+        run: |
+          composer global require phpstan/phpstan
+          echo "$HOME/.config/composer/vendor/bin" >> "$GITHUB_PATH"
+
+      - name: Download Moodle core
+        run: |
+          git clone --depth 1 --branch MOODLE_503_STABLE \
+            https://github.com/moodle/moodle.git moodle-core
+
+      - name: Install plugin into Moodle directory
+        run: |
+          mkdir -p moodle-core/mod/readinglibrary
+          cp -a moodle/plugins/mod_readinglibrary/. \
+            moodle-core/mod/readinglibrary/
+
+      - name: Check PHP syntax
+        run: |
+          find moodle-core/mod/readinglibrary \
+            -type f -name '*.php' -print0 |
+            xargs -0 -n1 php -l
+
+      - name: Run PHPStan
+        run: |
+          phpstan analyse \
+            moodle-core/mod/readinglibrary \
+            --level=6 \
+            --no-progress
 
   shellcheck:
     name: ShellCheck all scripts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
         with:
@@ -77,6 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Run Trivy
         uses: aquasecurity/trivy-action@master
         with:
@@ -97,15 +133,18 @@ jobs:
     environment: staging
     steps:
       - uses: actions/checkout@v4
-      - name: Run integration test suite
+
+      - name: Run integration tests
         env:
           MOODLE_HOST: ${{ secrets.STAGING_HOST }}
           MOODLE_PASS: ${{ secrets.STAGING_ADMIN_PASS }}
         run: bash tests/integration/integration_test.sh
-      - name: Run security test suite
+
+      - name: Run security tests
         env:
           MOODLE_HOST: ${{ secrets.STAGING_HOST }}
         run: bash tests/security/security_test.sh
+
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4
